@@ -14,7 +14,7 @@ export const sendContactRequest = async (req: Request, res: Response) => {
 
    await sendGmail({
   from: process.env.GMAIL_SENDER_EMAIL as string,
-  to: process.env.GMAIL_SENDER_EMAIL as string,
+  to: "inport@zohomail.in",
   replyTo: email,
   subject: `New Supply Request - ${company}`,
   html: `
