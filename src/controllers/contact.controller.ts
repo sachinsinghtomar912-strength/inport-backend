@@ -14,8 +14,8 @@ export const sendContactRequest = async (req: Request, res: Response) => {
     }
 
     await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: process.env.SMTP_USER,
+      from: process.env.GMAIL_SENDER_EMAIL,
+      to: process.env.GMAIL_SENDER_EMAIL,
       replyTo: email,
       subject: `New Supply Request - ${company}`,
       html: `
