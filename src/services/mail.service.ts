@@ -13,18 +13,14 @@ oauth2Client.setCredentials({
   refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
 });
 
-const gmail = google.gmail({
-  version: "v1",
-  auth: oauth2Client,
-});
+const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
-const encodeBase64Url = (input: string) => {
-  return Buffer.from(input)
+const encodeBase64Url = (input: string) =>
+  Buffer.from(input)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
-};
 
 export const sendGmail = async ({
   to,
@@ -32,32 +28,49 @@ export const sendGmail = async ({
   replyTo,
   subject,
   html,
+  file,
 }: {
   to: string;
   from: string;
   replyTo?: string;
   subject: string;
   html: string;
+  file?: Express.Multer.File;
 }) => {
-  const message = [
+  const boundary = "inport_boundary_123";
+
+  let message = [
     `From: ${from}`,
     `To: ${to}`,
     replyTo ? `Reply-To: ${replyTo}` : "",
     `Subject: ${subject}`,
     "MIME-Version: 1.0",
-    'Content-Type: text/html; charset="UTF-8"',
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    `Content-Type: text/html; charset="UTF-8"`,
     "",
     html,
-  ]
-    .filter(Boolean)
-    .join("\r\n");
+  ].filter(Boolean).join("\r\n");
 
-  const raw = encodeBase64Url(message);
+  if (file) {
+    message += [
+      "",
+      `--${boundary}`,
+      `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
+      `Content-Disposition: attachment; filename="${file.originalname}"`,
+      "Content-Transfer-Encoding: base64",
+      "",
+      file.buffer.toString("base64"),
+    ].join("\r\n");
+  }
+
+  message += `\r\n--${boundary}--`;
 
   return gmail.users.messages.send({
     userId: "me",
     requestBody: {
-      raw,
+      raw: encodeBase64Url(message),
     },
   });
 };

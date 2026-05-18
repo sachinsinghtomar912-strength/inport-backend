@@ -12,7 +12,7 @@ export const sendContactRequest = async (req: Request, res: Response) => {
       });
     }
 
-   await sendGmail({
+await sendGmail({
   from: process.env.GMAIL_SENDER_EMAIL as string,
   to: "inport@zohomail.in",
   replyTo: email,
@@ -29,6 +29,7 @@ export const sendContactRequest = async (req: Request, res: Response) => {
     <p><strong>Notes:</strong> ${notes || "No notes provided"}</p>
     <p><strong>Attachment:</strong> ${file ? file.originalname : "No attachment"}</p>
   `,
+  file,
 });
 
     return res.status(200).json({
