@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import dotenv from "dotenv";
+import MailComposer from "nodemailer/lib/mail-composer";
 
 dotenv.config();
 
@@ -15,8 +16,8 @@ oauth2Client.setCredentials({
 
 const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
-const encodeBase64Url = (input: string) =>
-  Buffer.from(input)
+const encodeBase64Url = (buffer: Buffer) =>
+  buffer
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -37,58 +38,27 @@ export const sendGmail = async ({
   html: string;
   file?: Express.Multer.File;
 }) => {
-  const mixedBoundary = `mixed_${Date.now()}`;
-  const relatedBoundary = `related_${Date.now()}`;
-  const isImage = file?.mimetype.startsWith("image/");
+  const attachments = file
+    ? [
+        {
+          filename: file.originalname,
+          content: file.buffer,
+          contentType: file.mimetype,
+          cid: file.mimetype.startsWith("image/") ? "uploaded-image" : undefined,
+        },
+      ]
+    : [];
 
-  let message = [
-    `From: ${from}`,
-    `To: ${to}`,
-    replyTo ? `Reply-To: ${replyTo}` : "",
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
-    "",
-    `--${mixedBoundary}`,
-    `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
-    "",
-    `--${relatedBoundary}`,
-    `Content-Type: text/html; charset="UTF-8"`,
-    "Content-Transfer-Encoding: 7bit",
-    "",
+  const mail = new MailComposer({
+    from,
+    to,
+    replyTo,
+    subject,
     html,
-  ]
-    .filter(Boolean)
-    .join("\r\n");
+    attachments,
+  });
 
-  if (isImage && file) {
-    message += [
-      "",
-      `--${relatedBoundary}`,
-      `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
-      `Content-Disposition: inline; filename="${file.originalname}"`,
-      "Content-ID: <uploaded-image>",
-      "Content-Transfer-Encoding: base64",
-      "",
-      file.buffer.toString("base64"),
-    ].join("\r\n");
-  }
-
-  message += `\r\n--${relatedBoundary}--`;
-
-  if (file && !isImage) {
-    message += [
-      "",
-      `--${mixedBoundary}`,
-      `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
-      `Content-Disposition: attachment; filename="${file.originalname}"`,
-      "Content-Transfer-Encoding: base64",
-      "",
-      file.buffer.toString("base64"),
-    ].join("\r\n");
-  }
-
-  message += `\r\n--${mixedBoundary}--`;
+  const message = await mail.compile().build();
 
   return gmail.users.messages.send({
     userId: "me",
