@@ -37,7 +37,8 @@ export const sendGmail = async ({
   html: string;
   file?: Express.Multer.File;
 }) => {
-  const boundary = "inport_boundary_123";
+  const boundary = `inport_boundary_${Date.now()}`;
+  const isImage = file?.mimetype.startsWith("image/");
 
   let message = [
     `From: ${from}`,
@@ -49,9 +50,12 @@ export const sendGmail = async ({
     "",
     `--${boundary}`,
     `Content-Type: text/html; charset="UTF-8"`,
+    "Content-Transfer-Encoding: 7bit",
     "",
     html,
-  ].filter(Boolean).join("\r\n");
+  ]
+    .filter(Boolean)
+    .join("\r\n");
 
   if (file) {
     message += [
@@ -59,10 +63,14 @@ export const sendGmail = async ({
       `--${boundary}`,
       `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
       `Content-Disposition: attachment; filename="${file.originalname}"`,
+      isImage ? "Content-ID: <uploaded-image>" : "",
+      isImage ? "Content-Location: uploaded-image" : "",
       "Content-Transfer-Encoding: base64",
       "",
       file.buffer.toString("base64"),
-    ].join("\r\n");
+    ]
+      .filter(Boolean)
+      .join("\r\n");
   }
 
   message += `\r\n--${boundary}--`;
