@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { transporter } from "../services/mail.service";
-
+import { sendGmail } from "../services/mail.service";
 export const sendContactRequest = async (req: Request, res: Response) => {
   try {
     const { company, vessel, port, eta, supply, email, phone, notes } = req.body;
@@ -13,33 +12,24 @@ export const sendContactRequest = async (req: Request, res: Response) => {
       });
     }
 
-    await transporter.sendMail({
-      from: process.env.GMAIL_SENDER_EMAIL,
-      to: process.env.GMAIL_SENDER_EMAIL,
-      replyTo: email,
-      subject: `New Supply Request - ${company}`,
-      html: `
-        <h2>New Supply Request</h2>
-        <p><strong>Company:</strong> ${company}</p>
-        <p><strong>Vessel:</strong> ${vessel}</p>
-        <p><strong>Port:</strong> ${port}</p>
-        <p><strong>ETA:</strong> ${eta}</p>
-        <p><strong>Supply Type:</strong> ${supply}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Notes:</strong> ${notes || "No notes provided"}</p>
-        <p><strong>Attachment:</strong> ${file ? file.originalname : "No attachment"}</p>
-      `,
-      attachments: file
-        ? [
-            {
-              filename: file.originalname,
-              content: file.buffer,
-              contentType: file.mimetype,
-            },
-          ]
-        : [],
-    });
+   await sendGmail({
+  from: process.env.GMAIL_SENDER_EMAIL as string,
+  to: process.env.GMAIL_SENDER_EMAIL as string,
+  replyTo: email,
+  subject: `New Supply Request - ${company}`,
+  html: `
+    <h2>New Supply Request</h2>
+    <p><strong>Company:</strong> ${company}</p>
+    <p><strong>Vessel:</strong> ${vessel}</p>
+    <p><strong>Port:</strong> ${port}</p>
+    <p><strong>ETA:</strong> ${eta}</p>
+    <p><strong>Supply Type:</strong> ${supply}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Phone:</strong> ${phone}</p>
+    <p><strong>Notes:</strong> ${notes || "No notes provided"}</p>
+    <p><strong>Attachment:</strong> ${file ? file.originalname : "No attachment"}</p>
+  `,
+});
 
     return res.status(200).json({
       success: true,
