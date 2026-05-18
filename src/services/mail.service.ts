@@ -37,7 +37,8 @@ export const sendGmail = async ({
   html: string;
   file?: Express.Multer.File;
 }) => {
-  const boundary = `inport_boundary_${Date.now()}`;
+  const mixedBoundary = `mixed_${Date.now()}`;
+  const relatedBoundary = `related_${Date.now()}`;
   const isImage = file?.mimetype.startsWith("image/");
 
   let message = [
@@ -46,9 +47,12 @@ export const sendGmail = async ({
     replyTo ? `Reply-To: ${replyTo}` : "",
     `Subject: ${subject}`,
     "MIME-Version: 1.0",
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
     "",
-    `--${boundary}`,
+    `--${mixedBoundary}`,
+    `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
+    "",
+    `--${relatedBoundary}`,
     `Content-Type: text/html; charset="UTF-8"`,
     "Content-Transfer-Encoding: 7bit",
     "",
@@ -57,23 +61,34 @@ export const sendGmail = async ({
     .filter(Boolean)
     .join("\r\n");
 
-  if (file) {
+  if (isImage && file) {
     message += [
       "",
-      `--${boundary}`,
+      `--${relatedBoundary}`,
       `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
-      `Content-Disposition: attachment; filename="${file.originalname}"`,
-      isImage ? "Content-ID: <uploaded-image>" : "",
-      isImage ? "Content-Location: uploaded-image" : "",
+      `Content-Disposition: inline; filename="${file.originalname}"`,
+      "Content-ID: <uploaded-image>",
       "Content-Transfer-Encoding: base64",
       "",
       file.buffer.toString("base64"),
-    ]
-      .filter(Boolean)
-      .join("\r\n");
+    ].join("\r\n");
   }
 
-  message += `\r\n--${boundary}--`;
+  message += `\r\n--${relatedBoundary}--`;
+
+  if (file && !isImage) {
+    message += [
+      "",
+      `--${mixedBoundary}`,
+      `Content-Type: ${file.mimetype}; name="${file.originalname}"`,
+      `Content-Disposition: attachment; filename="${file.originalname}"`,
+      "Content-Transfer-Encoding: base64",
+      "",
+      file.buffer.toString("base64"),
+    ].join("\r\n");
+  }
+
+  message += `\r\n--${mixedBoundary}--`;
 
   return gmail.users.messages.send({
     userId: "me",

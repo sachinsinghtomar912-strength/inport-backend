@@ -16,13 +16,13 @@ export const sendContactRequest = async (req: Request, res: Response) => {
     const imagePreview =
       file && file.mimetype.startsWith("image/")
         ? `
-          <h3 style="margin-top: 24px;">Uploaded Image Preview</h3>
-          <img 
-            src="cid:uploaded-image" 
-            alt="${file.originalname}" 
-            style="max-width: 500px; width: 100%; border-radius: 12px; border: 1px solid #ddd;" 
-          />
-        `
+      <h3 style="margin-top: 24px;">Uploaded Image Preview</h3>
+      <img 
+        src="cid:uploaded-image" 
+        alt="${file.originalname}" 
+        style="max-width: 500px; width: 100%; border-radius: 12px; border: 1px solid #ddd;" 
+      />
+    `
         : "";
 
     await sendGmail({
